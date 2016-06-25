@@ -13,7 +13,7 @@ local function getData( url )
     sleep(1)
   end
   if source == nil then error("Failed to install " .. url,0) end
-  local data   = source.readAll():gsub("(%s%{(.-)%})",function(orig, value) { return global[value] or orig })
+  local data   = source.readAll():gsub("(%$%{(.-)%})",function(orig, value) { return global[value] or orig })
   source.close()
   
   return data
@@ -63,6 +63,6 @@ end
 scanTree(dirTree, installDir .. "/.lvls")
 sleep(1)
 local dest = fs.open(installDir .. "/levels","w")
-dest.write(getData("https://raw.githubusercontent.com/SquidDoctor/CCJam2016/master/levels"):gsub("(%s%{(.-)%})",function(orig, value) { return global[value] or orig }))
+dest.write(getData("https://raw.githubusercontent.com/SquidDoctor/CCJam2016/master/levels"):gsub("(%$%{(.-)%})",function(orig, value) { return global[value] or orig }))
 dest.close()
 print("Levels has been successfully installed.")
