@@ -1,0 +1,9 @@
+{
+  assets = {
+    logo = "https://raw.githubusercontent.com/SquidDoctor/CCJam2016/master/assets/logo",
+  },
+  blittle = "http://pastebin.com/raw/ujchRSnU",
+  logs = {},
+  version = "https://raw.githubusercontent.com/SquidDoctor/CCJam2016/master/install/version",
+  views = {},
+}
