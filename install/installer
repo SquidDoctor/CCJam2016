@@ -1,0 +1,64 @@
+--// Installer for Levels                      \\--
+--\\     by SquidDoctor                        //--
+
+local dirTreeLocation = "https://raw.githubusercontent.com/SquidDoctor/CCJam2016/master/install/dirtree"
+
+local function getData( url )
+  local source = {}
+  for i = 1,15 do
+    source = http.get( url )
+    if source ~= nil then break end
+    sleep(1)
+  end
+  if source == nil then error("Failed to install " .. url,0) end
+  local data   = source.readAll()
+  source.close()
+  
+  return data
+end
+
+local function ynPrompt( message )
+  print(message .. " [Y/n]")
+  while true do
+    local _, key = os.pullEvent("key")
+    if key == keys.y then
+      return true
+    else
+      return false
+    end
+  end
+end
+
+local installDir = "/"
+while true do
+  local installYsN = ynPrompt("Levels is current installing to \"" .. installDir .. "\" Is this okay? ")
+  if not installYsN then
+    write("Where do you want to install it? Use an absolute directory. > ")
+    installDir = "/" .. fs.combine("",read())
+  else
+    break
+  end
+end
+
+local dirTree = textutils.unserialize(getData( dirTreeLocation  ))
+
+local function scanTree( tree, prefix )
+  for name, value in pairs( tree ) do
+    if type(value) == "table" then
+      scanTree(value, fs.combine(prefix, name))
+    else
+      local dest = fs.open(fs.combine(prefix, name),"w")
+      dest.write(getData( value ))
+      dest.close()
+      print("Downloaded " .. fs.getName(name))
+      sleep(0)
+    end
+  end
+end
+
+scanTree(dirTree, installDir .. "/.lvls")
+sleep(1)
+local dest = fs.open(installDir .. "/levels","w")
+dest.write(getData("https://raw.githubusercontent.com/SquidDoctor/CCJam2016/master/levels"))
+dest.close()
+print("Levels has been successfully installed.")
