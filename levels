@@ -1,0 +1,118 @@
+os.loadAPI("blittle")
+
+--// Variables //--
+
+local installPath    = "/.lvls"
+
+local logLocation    = installPath .. "/logs"
+
+local viewLocation   = installPath .. "/views"
+
+local assets         = {}
+local assetsLocation = installPath .. "/assets"
+
+local logHandle      = fs.open(fs.combine(logLocation, (os.day() .. "-" .. textutils.formatTime(os.time()):gsub(" ","-"):gsub(":","-"):lower() .. ".log")), "w")
+
+
+local running        = true
+local debug          = true
+
+--// Functions //--
+
+--/// Logging ///--
+
+local function log( data, level )
+  logHandle.write("[" .. (level or "INFO") .. " " .. 
+    textutils.formatTime(os.time(),true) .. "] " .. 
+    (type(data) == "table" and textutils.serialize(data):gsub("\n%s*","") or tostring(data)))
+  logHandle.flush()
+end
+
+local function logWarn( data )
+  return log( data, "WARN")
+end
+
+local function logFatal( data )
+  log( data, "FATAL")
+  running = false
+end
+
+local function logDebug( data )
+  if debug then
+    return log(data, "DEBUG")
+  end
+end
+
+--/// File parsing ///--
+local function loadAssets()
+  for k,v in pairs(fs.find(fs.combine(assetsLocation,"*"))) do
+    local tmp1, tmp2 = fs.getName(v):find("%.")
+    local name = fs.getName(v):sub(1,tmp2)
+    local ext  = ""
+    name:gsub(".*%.(.*)",function(_ext) ext = ext_:lower() end)
+    log("Loading asset " .. name)
+    if ext == "blit" then
+      assets[name] = blittle.load(v)
+    else
+      assets[name] = blittle.shrink(paintutils.loadImage(v))
+    end
+  end
+end
+
+local function loadView( path )
+  
+end
+
+--/// Event hooking ///--
+
+local eventHandles     = {}
+local eventHandleIndex = {}
+local eventID          = 0
+
+local function removeHandles()
+  eventHandles = {}
+  eventHandleIndex = {}
+  eventID = {}
+end
+
+local function handleEvent( event, callback )
+  eventID = eventID + 1
+  eventHandles[event] = eventHandles[event] or {}
+  eventHandleIndex[event] = eventHandleIndex[event] or {}
+  eventHandleIndex[event][eventID] = callback
+  eventHandles[event][eventID] = callback
+  return eventID
+end
+
+local function parseEvent( ... )
+  for event, eventIDs in pairs(eventHandles) do
+    for eventID, callback in pairs(eventIDs) do
+      local ok, err = pcall(callback, ... )
+      if not ok then
+        logWarn( err )
+      end
+    end
+  end
+end
+
+local function eventLoop()
+  while true do
+    parseEvent( coroutine.yield() )
+  end
+end
+
+
+--// Game code //--
+
+local ok, err = pcall(parallel.waitForAny,eventLoop, function()
+  log("Loading assets...")
+  loadAssets()
+end)
+
+if not ok then
+  logFatal(err)
+else
+  log("Successfully closed")
+end
+
+logHandle.close()
