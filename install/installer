@@ -3,6 +3,8 @@
 
 local dirTreeLocation = "https://raw.githubusercontent.com/SquidDoctor/CCJam2016/master/install/dirtree"
 
+local global = {}
+
 local function getData( url )
   local source = {}
   for i = 1,15 do
@@ -11,7 +13,7 @@ local function getData( url )
     sleep(1)
   end
   if source == nil then error("Failed to install " .. url,0) end
-  local data   = source.readAll()
+  local data   = source.readAll():gsub("(%s%{(.-)%})",function(orig, value) { return global[value] or orig })
   source.close()
   
   return data
@@ -40,6 +42,8 @@ while true do
   end
 end
 
+global[installPath] = installDir
+
 local dirTree = textutils.unserialize(getData( dirTreeLocation  ))
 
 local function scanTree( tree, prefix )
@@ -59,6 +63,6 @@ end
 scanTree(dirTree, installDir .. "/.lvls")
 sleep(1)
 local dest = fs.open(installDir .. "/levels","w")
-dest.write(getData("https://raw.githubusercontent.com/SquidDoctor/CCJam2016/master/levels"))
+dest.write(getData("https://raw.githubusercontent.com/SquidDoctor/CCJam2016/master/levels"):gsub("(%s%{(.-)%})",function(orig, value) { return global[value] or orig }))
 dest.close()
 print("Levels has been successfully installed.")
