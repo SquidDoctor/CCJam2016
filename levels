@@ -1,8 +1,6 @@
-os.loadAPI("blittle")
-
 --// Variables //--
 
-local installPath    = "/.lvls"
+local installPath    = "/${installPath}/.lvls"
 
 local logLocation    = installPath .. "/logs"
 
@@ -11,18 +9,26 @@ local viewLocation   = installPath .. "/views"
 local assets         = {}
 local assetsLocation = installPath .. "/assets"
 
-local logHandle      = fs.open(fs.combine(logLocation, (os.day() .. "-" .. textutils.formatTime(os.time()):gsub(" ","-"):gsub(":","-"):lower() .. ".log")), "w")
-
+local logName        = fs.combine(logLocation, (os.day() .. "-" .. textutils.formatTime(os.time()):gsub(" ","-"):gsub(":","-"):lower() .. ".log"))
+local logHandle      = fs.open(logName, "a")
 
 local running        = true
 local debug          = true
+
+--// BLittle API checker/downloader //--
+local ok = os.loadAPI(installPath .. "/blittle")
+if not ok then
+  printError("BLittle is not installed! This is required to continue")
+  printError("Download it to " .. installPath .. "/blittle")
+  return
+end
 
 --// Functions //--
 
 --/// Logging ///--
 
 local function log( data, level )
-  logHandle.write("[" .. (level or "INFO") .. " " .. 
+  logHandle.writeLine("[" .. (level or "INFO") .. " " .. 
     textutils.formatTime(os.time(),true) .. "] " .. 
     (type(data) == "table" and textutils.serialize(data):gsub("\n%s*","") or tostring(data)))
   logHandle.flush()
@@ -45,12 +51,36 @@ end
 
 --/// File parsing ///--
 local function loadAssets()
-  for k,v in pairs(fs.find(fs.combine(assetsLocation,"*"))) do
+  --// size: 10
+  local sX, sY = term.getSize()
+  local function writeCenter(y, text)
+    term.setCursorPos(math.ceil(sX/2)-math.floor(#text/2), y)
+    term.write( text )
+  end
+  term.setCursorPos(1,1)
+  term.setBackgroundColor(colors.white)
+  term.clear()
+  paintutils.drawImage(paintutils.loadImage(assetsLocation .. "/logo"), sX/2 - 4, math.floor(sY/2) - 6)
+  term.setCursorPos(1,1) --// /127 = weird grid character
+  local scan = fs.find(fs.combine(assetsLocation, "*"))
+  local barlength = sX - 6
+  for k,v in pairs(scan) do
     local tmp1, tmp2 = fs.getName(v):find("%.")
     local name = fs.getName(v):sub(1,tmp2)
     local ext  = ""
     name:gsub(".*%.(.*)",function(_ext) ext = ext_:lower() end)
     log("Loading asset " .. name)
+    term.setTextColor(colors.gray)
+--    term.setCursorPos(1,math.floor(sY/2)+7) term.clearLine()
+    term.setBackgroundColor(colors.white)
+    writeCenter(math.floor(sY/2) + 7, "        Loading asset " .. name:sub(1,sX-6) .. "        ")
+    local nBar = (k / #scan) * barlength
+    local sBar = (" "):rep(math.floor(nBar)) ..
+      ("\127"):rep(math.ceil(barlength - nBar))
+    term.setCursorPos(1,math.floor(sY/2)+5) term.clearLine()
+    term.setBackgroundColor(colors.blue)
+    term.setTextColor(colors.white)
+    writeCenter(math.floor(sY/2) + 5, sBar)
     if ext == "blit" then
       assets[name] = blittle.load(v)
     else
@@ -59,8 +89,15 @@ local function loadAssets()
   end
 end
 
-local function loadView( path )
+local function loadView( name )
+  name:gsub("(.*)%.level", function(n) name = n end)
+  name = name .. ".level"
+  if not fs.exists(installPath .. "") then
+    logWarn("Map \"" .. name .. "\"does not exist.")
+    return false, "Map does not exist."
+  end
   
+  return true
 end
 
 --/// Event hooking ///--
@@ -104,13 +141,18 @@ end
 
 --// Game code //--
 
-local ok, err = pcall(parallel.waitForAny,eventLoop, function()
+local ok, err = pcall(parallel.waitForAny, eventLoop, function()
   log("Loading assets...")
   loadAssets()
 end)
 
 if not ok then
   logFatal(err)
+  printError("Uh oh! A fatal exception has occured.")
+  printError("Please send " .. logName .. " to the creator.")
+  if debug then
+    printError(err)
+  end
 else
   log("Successfully closed")
 end
