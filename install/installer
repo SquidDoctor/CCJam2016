@@ -42,7 +42,7 @@ while true do
   end
 end
 
-global[installPath] = installDir
+global["installPath"] = installDir
 
 local dirTree = textutils.unserialize(getData( dirTreeLocation  ))
 
