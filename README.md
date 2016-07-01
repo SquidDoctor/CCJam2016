@@ -5,4 +5,5 @@ For CCJam2016
 I am making `Levels`, a game!
 
 ## How do I install it?
-Installer is in a WIP state. Sorry!
+Simply run the installer and follow the setup instructions!
+Then, all you need to do is run `levels`!
